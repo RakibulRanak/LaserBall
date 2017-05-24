@@ -21,6 +21,7 @@ public class LaserActor extends Actor implements Pool.Poolable {
     private final float LASER_H = 110 * GameScreen.cannon_height / 128;
     private final float SCALE_X = GameScreen.cannon_width / GameScreen.cannon_stationary.getRegionWidth();
     private final float SCALE_Y = GameScreen.cannon_height / GameScreen.cannon_stationary.getRegionHeight();
+
     private int num, id;
 
     public LaserActor(int num, int id) {
@@ -45,14 +46,6 @@ public class LaserActor extends Actor implements Pool.Poolable {
         this.setY(LASER_H);
         this.clearActions();
         this.addAction(scaleTo(1f, 2f, 0.1f));
-//        this.addAction(sequence(parallel(scaleTo(1f, 2f, 0.25f), moveTo(this.getX(), Gdx.graphics.getHeight(), 2f)), run(
-//                new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        System.out.println("Laser offscreen.");
-//                    }
-//                }
-//        )));
     }
 
     public int getNum() {
@@ -60,7 +53,7 @@ public class LaserActor extends Actor implements Pool.Poolable {
     }
 
     public float getVel() {
-        return (Gdx.graphics.getHeight() - LASER_H * SCALE_Y) / 1f;
+        return (GameScreen.getHeight() - LASER_H * SCALE_Y) / 1f;
     }
 
     @Override

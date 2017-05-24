@@ -1,13 +1,16 @@
 package com.chrisni.screens;
 
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.scenes.scene2d.*;
@@ -19,7 +22,7 @@ import com.chrisni.actors.LaserPool;
 import com.chrisni.actors.ScoreActor;
 import com.chrisni.game.LaserBall;
 
-import java.util.Arrays;
+import java.util.Iterator;
 
 public class GameScreen implements Screen {
 
@@ -95,6 +98,7 @@ public class GameScreen implements Screen {
 	private Array<Body> balls;
 	private Array<Body> lasers;
 	private ScoreActor score;
+	private BallActor ballActor;
 	private float accumulator;
 	private final short LASER_MASK = 0x1;
 	private final short BALL_MASK = 0x1 << 2;
@@ -108,21 +112,18 @@ public class GameScreen implements Screen {
 		score = new ScoreActor(game);
 		lasers = new Array<Body>(Body.class);
 		balls = new Array<Body>(Body.class);
-//		viewp = new FitViewport(WIDTH, HEIGHT, MainMenuScreen.camera);
-//		batch = new SpriteBatch();
-//		stage = new Stage(viewp, batch); TODO: fix this
-		stage = new Stage();
+		viewp = new FitViewport(WIDTH, HEIGHT, new OrthographicCamera());
+		batch = new SpriteBatch();
+		stage = new Stage(viewp, batch);
 		stage.addActor(score);
-		Gdx.graphics.setWindowedMode(WIDTH, HEIGHT);
 		cannon_stationary = new TextureRegion(new Texture("img/cannon/cannon_stationary.png"));
 		cannon_prepare = new TextureRegion(new Texture("img/cannon/cannon_prepare.png"));
-		cannon_width = cannon_stationary.getRegionWidth() * Gdx.graphics.getWidth() / (float) NUM_CANNON / cannon_stationary.getRegionWidth();
-		cannon_height = cannon_stationary.getRegionHeight() * Gdx.graphics.getHeight() * Y_FRAC / cannon_stationary.getRegionHeight();
+		cannon_width = cannon_stationary.getRegionWidth() * WIDTH / (float) NUM_CANNON / cannon_stationary.getRegionWidth();
+		cannon_height = cannon_stationary.getRegionHeight() * HEIGHT * Y_FRAC / cannon_stationary.getRegionHeight();
 		for (int i = 0; i < NUM_CANNON; i++) {
 			stage.addActor(new CannonActor(i));
 			LASERS[i] = new LaserPool(i, NUM_CANNON);
 		}
-		Gdx.graphics.setResizable(false);
 		Gdx.input.setInputProcessor(stage);
 		initPhysics();
 	}
@@ -142,21 +143,31 @@ public class GameScreen implements Screen {
 		stepPhysics(delta);
 		stage.act(Gdx.graphics.getDeltaTime());
 
-		for (Body body: balls) {
-			if (body.getPosition().y <= 0) {
-				game.setScreen(new GameOverScreen(game, score.getScore()));
-				this.dispose();
+		Iterator<Body> ballIterator = balls.iterator();
+		while(ballIterator.hasNext()) {
+			Body body = ballIterator.next();
+			if (body.getPosition().y <= (cannon_height - 10 )/ PIXELS_TO_METERS) {
+				ballActor = (BallActor) body.getUserData();
+				ballActor.remove();
+				ballIterator.remove();
+				world.destroyBody(body);
 			}
 		}
+		if (balls.size == 0) {
+			game.setScreen(new GameOverScreen(game, score.getScore()));
+			this.dispose();
+		}
 
-			for (Body body: deadLasers) {
+		Iterator<Body> laserIterator = deadLasers.iterator();
+		while (laserIterator.hasNext()) {
+			Body body = laserIterator.next();
 			curr = (LaserActor) body.getUserData();
 			curr.remove();
 			LASERS[curr.getNum()].free(curr);
 			lasers.removeValue(body, false);
 			world.destroyBody(body);
+			laserIterator.remove();
 		}
-		deadLasers.clear();
 		stage.draw();
 	}
 
@@ -167,7 +178,7 @@ public class GameScreen implements Screen {
 
 	@Override
 	public void resize(int width, int height) {
-
+		stage.getViewport().update(width, height, true);
 	}
 
 	@Override
@@ -200,54 +211,19 @@ public class GameScreen implements Screen {
 	}
 
 	private void initPhysics() {
-		BallActor ballActor = new BallActor(0);
-		stage.addActor(ballActor);
 		world = new World(new Vector2(0, -1f), true);
-		BodyDef ballDef = new BodyDef();
-		ballDef.type = BodyDef.BodyType.DynamicBody;
-		ballDef.position.set((ballActor.getX() + ballActor.getWidth() / 2) / PIXELS_TO_METERS, (ballActor.getY() + ballActor.getHeight() / 2) / PIXELS_TO_METERS);
-		ballDef.linearVelocity.add(new Vector2(1f, 0));
-		Body ball = world.createBody(ballDef);
 
-		ball.setUserData(ballActor);
+		ballInit();
 
-		CircleShape ballShape = new CircleShape();
-		ballShape.setRadius(ballActor.getHeight() / 2 / PIXELS_TO_METERS);
-
-		FixtureDef ballFixtureDef = new FixtureDef();
-		ballFixtureDef.shape = ballShape;
-		ballFixtureDef.density = 0.75f;
-		ballFixtureDef.restitution = 1.5f;
-		ballFixtureDef.filter.categoryBits = BALL_MASK;
-		ballFixtureDef.filter.maskBits = BALL_MASK | LASER_MASK | WALL_MASK;
-
-		ball.createFixture(ballFixtureDef);
-		ballShape.dispose();
-
-		balls.add(ball);
-
-//		initWall(new BodyDef(), false, false);
-		initWall(new BodyDef(), true, false);
-		initWall(new BodyDef(), false, true);
-		initWall(new BodyDef(), true, true);
+		wallInit(new BodyDef(), true, false);
+		wallInit(new BodyDef(), false, true);
+		wallInit(new BodyDef(), true, true);
 
 
 		world.setContactListener(new ContactListener() {
 			@Override
 			public void beginContact(Contact contact) {
-				if (contact.getFixtureA().getBody().getUserData() instanceof LaserActor) {
-					deadLasers.add(contact.getFixtureA().getBody());
-					if (contact.getFixtureA().getBody().getUserData() instanceof BallActor
-							||contact.getFixtureB().getBody().getUserData() instanceof BallActor) {
-						score.increase();
-					}
-				} else if (contact.getFixtureB().getBody().getUserData() instanceof LaserActor) {
-					deadLasers.add(contact.getFixtureB().getBody());
-					if (contact.getFixtureA().getBody().getUserData() instanceof BallActor
-							||contact.getFixtureB().getBody().getUserData() instanceof BallActor) {
-						score.increase();
-					}
-				}
+
 			}
 
 			@Override
@@ -262,26 +238,48 @@ public class GameScreen implements Screen {
 
 			@Override
 			public void postSolve(Contact contact, ContactImpulse impulse) {
-
+				if (contact.getFixtureA().getBody().getUserData() instanceof LaserActor) {
+					deadLasers.add(contact.getFixtureA().getBody());
+					if (contact.getFixtureA().getBody().getUserData() instanceof BallActor
+							||contact.getFixtureB().getBody().getUserData() instanceof BallActor) {
+						score.increase();
+						if (score.getScore() % 10 == 0) Gdx.app.postRunnable(new Runnable() {
+							@Override
+							public void run() {
+								ballInit();							}
+						});
+					}
+				} else if (contact.getFixtureB().getBody().getUserData() instanceof LaserActor) {
+					deadLasers.add(contact.getFixtureB().getBody());
+					if (contact.getFixtureA().getBody().getUserData() instanceof BallActor
+							||contact.getFixtureB().getBody().getUserData() instanceof BallActor) {
+						score.increase();
+						if (score.getScore() % 10 == 0) Gdx.app.postRunnable(new Runnable() {
+							@Override
+							public void run() {
+								ballInit();							}
+						});
+					}
+				}
 			}
 		});
 
 	}
 
-	private void initWall(BodyDef wall, boolean vert, boolean top) {
+	private void wallInit(BodyDef wall, boolean vert, boolean top) {
 		wall.type = BodyDef.BodyType.StaticBody;
-		float originX = (top) ? Gdx.graphics.getWidth() / PIXELS_TO_METERS : 0;
-		float originY = (top) ? Gdx.graphics.getHeight() / PIXELS_TO_METERS : 0;
+		float originX = (top) ? WIDTH / PIXELS_TO_METERS : 0;
+		float originY = (top) ? HEIGHT / PIXELS_TO_METERS : 0;
 		wall.position.set(originX, originY);
 		FixtureDef wallDef = new FixtureDef();
 		EdgeShape edgeShape = new EdgeShape();
 		int factor = (top) ? -1 : 1;
-		float x = (vert) ? 0 : factor * Gdx.graphics.getWidth() / PIXELS_TO_METERS;
-		float y = (vert) ? factor * Gdx.graphics.getHeight() / PIXELS_TO_METERS : 0;
+		float x = (vert) ? 0 : factor * WIDTH / PIXELS_TO_METERS;
+		float y = (vert) ? factor * HEIGHT / PIXELS_TO_METERS : 0;
 		edgeShape.set(0, 0, x, y);
 		wallDef.shape = edgeShape;
 		wallDef.filter.categoryBits = WALL_MASK;
-		wallDef.restitution = 0.25f;
+		wallDef.restitution = 0f;
 		Body wallBody = world.createBody(wall);
 		wallBody.createFixture(wallDef);
 		edgeShape.dispose();
@@ -293,10 +291,14 @@ public class GameScreen implements Screen {
 			world.step(DT, 6, 2);
 			accumulator -= DT;
 		}
+
 		for (Body body : balls) {
 			BallActor ballActor = (BallActor) body.getUserData();
 			ballActor.setPosition(body.getPosition().x * PIXELS_TO_METERS - ballActor.getWidth() / 2, body.getPosition().y * PIXELS_TO_METERS - ballActor.getHeight() / 2);
 			ballActor.setRotation((float)Math.toDegrees(body.getAngle()));
+			if (body.getLinearVelocity().len() >= 2 * HEIGHT / PIXELS_TO_METERS) {
+				body.setLinearVelocity(body.getLinearVelocity().limit(2 * HEIGHT / PIXELS_TO_METERS));
+			}
 		}
 		for (Body body : lasers) {
 			LaserActor laserActor = (LaserActor) body.getUserData();
@@ -319,8 +321,8 @@ public class GameScreen implements Screen {
 
 		FixtureDef laserFixtureDef = new FixtureDef();
 		laserFixtureDef.shape = laserShape;
-		laserFixtureDef.density = 2f;
-		laserFixtureDef.restitution = 1f;
+		laserFixtureDef.density = 5f;
+		laserFixtureDef.restitution = 0f;
 		laserFixtureDef.filter.categoryBits = LASER_MASK;
 		laserFixtureDef.filter.maskBits = BALL_MASK | WALL_MASK;
 
@@ -329,5 +331,32 @@ public class GameScreen implements Screen {
 		laserShape.dispose();
 
 		lasers.add(laserBody);
+	}
+
+	private void ballInit() {
+		ballActor = new BallActor(score.getScore() % 10);
+		stage.addActor(ballActor);
+		BodyDef ballDef = new BodyDef();
+		ballDef.type = BodyDef.BodyType.DynamicBody;
+		ballDef.position.set((ballActor.getX() + ballActor.getWidth() / 2) / PIXELS_TO_METERS, (ballActor.getY() + ballActor.getHeight() / 2) / PIXELS_TO_METERS);
+		ballDef.linearVelocity.add(new Vector2(MathUtils.randomSign(), 0));
+		Body ball = world.createBody(ballDef);
+
+		ball.setUserData(ballActor);
+
+		CircleShape ballShape = new CircleShape();
+		ballShape.setRadius(ballActor.getHeight() / 2 / PIXELS_TO_METERS);
+
+		FixtureDef ballFixtureDef = new FixtureDef();
+		ballFixtureDef.shape = ballShape;
+		ballFixtureDef.density = 0.5f;
+		ballFixtureDef.restitution = 1f;
+		ballFixtureDef.filter.categoryBits = BALL_MASK;
+		ballFixtureDef.filter.maskBits = BALL_MASK | LASER_MASK | WALL_MASK;
+
+		ball.createFixture(ballFixtureDef);
+		ballShape.dispose();
+
+		balls.add(ball);
 	}
 }
