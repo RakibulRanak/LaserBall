@@ -60,7 +60,7 @@ public class LaserActor extends Actor implements Pool.Poolable {
     }
 
     public float getVel() {
-        return (Gdx.graphics.getHeight() - LASER_H * SCALE_Y) / 2f;
+        return (Gdx.graphics.getHeight() - LASER_H * SCALE_Y) / 1f;
     }
 
     @Override

@@ -8,17 +8,15 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.maps.Map;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.scenes.scene2d.*;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.ArrayMap;
-import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.chrisni.actors.BallActor;
 import com.chrisni.actors.LaserActor;
 import com.chrisni.actors.LaserPool;
+import com.chrisni.actors.ScoreActor;
 import com.chrisni.game.LaserBall;
 
 import java.util.Arrays;
@@ -72,18 +70,6 @@ public class GameScreen implements Screen {
 		}
 	}
 
-	private class Properties {
-		Vector2 prevPos, pos;
-		float prevAngle, angle;
-
-		Properties(Vector2 pos, float angle) {
-			this.prevPos = new Vector2();
-			this.pos = pos;
-			this.prevAngle = 0;
-			this.angle = angle;
-		}
-	}
-
 	private final static int NUM_CANNON = 5;
 	private final static int WIDTH = 480;
 	private final static int HEIGHT = 800;
@@ -106,19 +92,27 @@ public class GameScreen implements Screen {
 	private final LaserBall game;
 
 	private World world;
-	private ArrayMap<Body, Properties> balls;
-	private ObjectMap<Body, Properties> lasers;
+	private Array<Body> balls;
+	private Array<Body> lasers;
+	private ScoreActor score;
 	private float accumulator;
+	private final short LASER_MASK = 0x1;
+	private final short BALL_MASK = 0x1 << 2;
+	private final short WALL_MASK = 0x1 << 3;
+
 	public static final float PIXELS_TO_METERS = 100f;
+
 
 	public GameScreen(final LaserBall game) {
 		this.game = game;
-		lasers = new ObjectMap<Body, Properties>();
-		balls = new ArrayMap<Body, Properties>(Body.class, Properties.class);
-		viewp = new FitViewport(WIDTH, HEIGHT, MainMenuScreen.camera);
-		batch = new SpriteBatch();
+		score = new ScoreActor(game);
+		lasers = new Array<Body>(Body.class);
+		balls = new Array<Body>(Body.class);
+//		viewp = new FitViewport(WIDTH, HEIGHT, MainMenuScreen.camera);
+//		batch = new SpriteBatch();
 //		stage = new Stage(viewp, batch); TODO: fix this
 		stage = new Stage();
+		stage.addActor(score);
 		Gdx.graphics.setWindowedMode(WIDTH, HEIGHT);
 		cannon_stationary = new TextureRegion(new Texture("img/cannon/cannon_stationary.png"));
 		cannon_prepare = new TextureRegion(new Texture("img/cannon/cannon_prepare.png"));
@@ -148,11 +142,18 @@ public class GameScreen implements Screen {
 		stepPhysics(delta);
 		stage.act(Gdx.graphics.getDeltaTime());
 
-		for (Body body: deadLasers) {
+		for (Body body: balls) {
+			if (body.getPosition().y <= 0) {
+				game.setScreen(new GameOverScreen(game, score.getScore()));
+				this.dispose();
+			}
+		}
+
+			for (Body body: deadLasers) {
 			curr = (LaserActor) body.getUserData();
 			curr.remove();
 			LASERS[curr.getNum()].free(curr);
-			lasers.remove(body);
+			lasers.removeValue(body, false);
 			world.destroyBody(body);
 		}
 		deadLasers.clear();
@@ -187,6 +188,7 @@ public class GameScreen implements Screen {
 	@Override
 	public void dispose () {
 		stage.dispose();
+		world.dispose();
 	}
 
 	public static int getWidth() {
@@ -208,71 +210,97 @@ public class GameScreen implements Screen {
 		Body ball = world.createBody(ballDef);
 
 		ball.setUserData(ballActor);
-		Properties ballProps = new Properties(new Vector2(ball.getPosition().x, ball.getPosition().y), ball.getAngle());
 
 		CircleShape ballShape = new CircleShape();
 		ballShape.setRadius(ballActor.getHeight() / 2 / PIXELS_TO_METERS);
 
 		FixtureDef ballFixtureDef = new FixtureDef();
 		ballFixtureDef.shape = ballShape;
-		ballFixtureDef.density = 0.5f;
+		ballFixtureDef.density = 0.75f;
+		ballFixtureDef.restitution = 1.5f;
+		ballFixtureDef.filter.categoryBits = BALL_MASK;
+		ballFixtureDef.filter.maskBits = BALL_MASK | LASER_MASK | WALL_MASK;
 
-		Fixture ballFixture = ball.createFixture(ballFixtureDef);
+		ball.createFixture(ballFixtureDef);
 		ballShape.dispose();
 
-		balls.put(ball, ballProps);
+		balls.add(ball);
+
+//		initWall(new BodyDef(), false, false);
+		initWall(new BodyDef(), true, false);
+		initWall(new BodyDef(), false, true);
+		initWall(new BodyDef(), true, true);
+
+
+		world.setContactListener(new ContactListener() {
+			@Override
+			public void beginContact(Contact contact) {
+				if (contact.getFixtureA().getBody().getUserData() instanceof LaserActor) {
+					deadLasers.add(contact.getFixtureA().getBody());
+					if (contact.getFixtureA().getBody().getUserData() instanceof BallActor
+							||contact.getFixtureB().getBody().getUserData() instanceof BallActor) {
+						score.increase();
+					}
+				} else if (contact.getFixtureB().getBody().getUserData() instanceof LaserActor) {
+					deadLasers.add(contact.getFixtureB().getBody());
+					if (contact.getFixtureA().getBody().getUserData() instanceof BallActor
+							||contact.getFixtureB().getBody().getUserData() instanceof BallActor) {
+						score.increase();
+					}
+				}
+			}
+
+			@Override
+			public void endContact(Contact contact) {
+
+			}
+
+			@Override
+			public void preSolve(Contact contact, Manifold oldManifold) {
+
+			}
+
+			@Override
+			public void postSolve(Contact contact, ContactImpulse impulse) {
+
+			}
+		});
+
+	}
+
+	private void initWall(BodyDef wall, boolean vert, boolean top) {
+		wall.type = BodyDef.BodyType.StaticBody;
+		float originX = (top) ? Gdx.graphics.getWidth() / PIXELS_TO_METERS : 0;
+		float originY = (top) ? Gdx.graphics.getHeight() / PIXELS_TO_METERS : 0;
+		wall.position.set(originX, originY);
+		FixtureDef wallDef = new FixtureDef();
+		EdgeShape edgeShape = new EdgeShape();
+		int factor = (top) ? -1 : 1;
+		float x = (vert) ? 0 : factor * Gdx.graphics.getWidth() / PIXELS_TO_METERS;
+		float y = (vert) ? factor * Gdx.graphics.getHeight() / PIXELS_TO_METERS : 0;
+		edgeShape.set(0, 0, x, y);
+		wallDef.shape = edgeShape;
+		wallDef.filter.categoryBits = WALL_MASK;
+		wallDef.restitution = 0.25f;
+		Body wallBody = world.createBody(wall);
+		wallBody.createFixture(wallDef);
+		edgeShape.dispose();
 	}
 
 	private void stepPhysics(float delta) {
-		for (Body body : balls.keys()) {
-			Properties currProp = balls.get(body);
-			currProp.prevPos.x = currProp.pos.x;
-			currProp.prevPos.y = currProp.pos.y;
-			currProp.prevAngle = currProp.angle;
-		}
-		for (Body body : lasers.keys()) {
-			Properties currProp = lasers.get(body);
-			currProp.prevPos.x = currProp.pos.x;
-			currProp.prevPos.y = currProp.pos.y;
-			currProp.prevAngle = currProp.angle;
-		}
 		accumulator += delta;
 		while (accumulator >= DT) {
 			world.step(DT, 6, 2);
 			accumulator -= DT;
 		}
-//		interpolate(accumulator / DT);
-		for (Body body : balls.keys()) {
-			Properties currProp = balls.get(body);
+		for (Body body : balls) {
 			BallActor ballActor = (BallActor) body.getUserData();
-//			ballActor.setPosition(currProp.pos.x * PIXELS_TO_METERS - ballActor.getWidth() / 2, currProp.pos.y * PIXELS_TO_METERS - ballActor.getHeight() / 2);
 			ballActor.setPosition(body.getPosition().x * PIXELS_TO_METERS - ballActor.getWidth() / 2, body.getPosition().y * PIXELS_TO_METERS - ballActor.getHeight() / 2);
+			ballActor.setRotation((float)Math.toDegrees(body.getAngle()));
 		}
-		for (Body body : lasers.keys()) {
-			Properties currProp = lasers.get(body);
+		for (Body body : lasers) {
 			LaserActor laserActor = (LaserActor) body.getUserData();
-			float y = currProp.pos.y * PIXELS_TO_METERS - laserActor.getHeight() / 2;
-			if (y >= Gdx.graphics.getHeight()) {
-				deadLasers.add(body);
-			} else {
-//				laserActor.setPosition(currProp.pos.x * PIXELS_TO_METERS - laserActor.getWidth() / 2, currProp.pos.y * PIXELS_TO_METERS - laserActor.getHeight() / 2);
-				laserActor.setPosition(body.getPosition().x * PIXELS_TO_METERS - laserActor.getWidth() / 2, body.getPosition().y * PIXELS_TO_METERS - laserActor.getHeight() / 2);
-			}
-		}
-	}
-
-	private void interpolate(float alpha) {
-		for (Body body : balls.keys()) {
-			Properties currProp = balls.get(body);
-			currProp.pos.x = body.getPosition().x * alpha + currProp.prevPos.x * (1f - alpha);
-			currProp.pos.y = body.getPosition().y * alpha + currProp.prevPos.y * (1f - alpha);
-			currProp.angle = body.getAngle() * alpha + currProp.prevAngle * (1f - alpha);
-		}
-		for (Body body : lasers.keys()) {
-			Properties currProp = lasers.get(body);
-			currProp.pos.x = body.getPosition().x * alpha + currProp.prevPos.x * (1f - alpha);
-			currProp.pos.y = body.getPosition().y * alpha + currProp.prevPos.y * (1f - alpha);
-			currProp.angle = body.getAngle() * alpha + currProp.prevAngle * (1f - alpha);
+			laserActor.setPosition(body.getPosition().x * PIXELS_TO_METERS - laserActor.getWidth() / 2, body.getPosition().y * PIXELS_TO_METERS - laserActor.getHeight() / 2);
 		}
 	}
 
@@ -281,21 +309,25 @@ public class GameScreen implements Screen {
 		laserDef.type = BodyDef.BodyType.DynamicBody;
 		laserDef.type = BodyDef.BodyType.DynamicBody;
 		laserDef.position.set((laser.getX() + laser.getWidth() / 2) / PIXELS_TO_METERS, (laser.getY() + laser.getHeight() / 2) / PIXELS_TO_METERS);
-		laserDef.linearVelocity.add(new Vector2(0, laser.getVel()));
+		laserDef.linearVelocity.add(new Vector2(0, laser.getVel() / PIXELS_TO_METERS));
 		laserDef.gravityScale = 0;
 		Body laserBody = world.createBody(laserDef);
 		laserBody.setUserData(laser);
 
-		Properties laserProps = new Properties(new Vector2(laserBody.getPosition().x, laserBody.getPosition().y), laserBody.getAngle());
 		PolygonShape laserShape = new PolygonShape();
 		laserShape.setAsBox(laser.getWidth() / PIXELS_TO_METERS, laser.getHeight() / PIXELS_TO_METERS);
 
 		FixtureDef laserFixtureDef = new FixtureDef();
 		laserFixtureDef.shape = laserShape;
-		laserFixtureDef.density = 0.1f;
+		laserFixtureDef.density = 2f;
+		laserFixtureDef.restitution = 1f;
+		laserFixtureDef.filter.categoryBits = LASER_MASK;
+		laserFixtureDef.filter.maskBits = BALL_MASK | WALL_MASK;
 
-		Fixture laserFixture = laserBody.createFixture(laserFixtureDef);
+		laserBody.createFixture(laserFixtureDef);
 
-		lasers.put(laserBody, laserProps);
+		laserShape.dispose();
+
+		lasers.add(laserBody);
 	}
 }

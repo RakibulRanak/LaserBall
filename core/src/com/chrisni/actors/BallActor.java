@@ -20,15 +20,20 @@ public class BallActor extends Actor {
     public BallActor(int id) {
         super();
         this.id = id;
+        this.setWidth(ball.getRegionWidth());
+        this.setHeight(ball.getRegionHeight());
         this.setX(ball.getRegionWidth() / 2);
-        this.setY(Gdx.graphics.getHeight() - ball.getRegionHeight() / 2);
-        this.setHeight(ball.getRegionHeight() * SCALE_X);
-        this.setWidth(ball.getRegionWidth() * SCALE_Y);
+        this.setY(Gdx.graphics.getHeight() - this.getHeight() / 2);
+//        this.setHeight(ball.getRegionHeight() * SCALE_Y);
+//        this.setWidth(ball.getRegionWidth() * SCALE_X);
+//        this.setX(this.getWidth() / 2);
+//        this.setY(Gdx.graphics.getHeight() - this.getHeight() / 2);
     }
 
     @Override
     public void draw(Batch batch, float delta) {
-        batch.draw(ball, this.getX(), this.getY(), this.getWidth(), this.getHeight());
+//        batch.draw(ball, this.getX(), this.getY(), this.getWidth(), this.getHeight());
+        batch.draw(ball, this.getX(), this.getY());
     }
 
     @Override
