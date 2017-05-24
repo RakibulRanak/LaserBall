@@ -21,15 +21,17 @@ public class LaserPool extends Pool<LaserActor> {
 
     @Override
     protected LaserActor newObject() {
-        LaserActor currLaser = new LaserActor(num);
-        currLaser.addAction(sequence(parallel(scaleTo(1f, 2f, 0.25f), moveTo(currLaser.getX(), Gdx.graphics.getHeight(), 2f)), run(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        System.out.println("Laser offscreen.");
-                    }
-                }
-        )));
+        LaserActor currLaser = new LaserActor(num, count);
+        count++;
+//        currLaser.addAction(sequence(parallel(scaleTo(1f, 2f, 0.25f), moveTo(currLaser.getX(), Gdx.graphics.getHeight(), 2f)), run(
+//                new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        System.out.println("Laser offscreen.");
+//                    }
+//                }
+//        )));
+        currLaser.addAction(scaleTo(1f, 2f, 0.1f));
         return currLaser;
     }
 }
