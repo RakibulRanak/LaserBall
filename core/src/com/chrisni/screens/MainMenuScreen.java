@@ -2,6 +2,7 @@ package com.chrisni.screens;
 
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -15,9 +16,11 @@ public class MainMenuScreen implements Screen {
     private final LaserBall game;
 
     static OrthographicCamera camera;
+    public static Preferences prefs;
 
     public MainMenuScreen(final LaserBall laserBall) {
         this.game = laserBall;
+        this.prefs = Gdx.app.getPreferences("LaserBall");
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 480, 800);
     }
@@ -41,8 +44,12 @@ public class MainMenuScreen implements Screen {
         game.batch.end();
 
         if (Gdx.input.isTouched()) {
-            game.setScreen(new GameScreen(game));
-            dispose();
+            Gdx.app.postRunnable(new Runnable() {
+                @Override
+                public void run() {
+                    game.setScreen(new GameScreen(game));
+                    dispose();
+                }});
         }
     }
 

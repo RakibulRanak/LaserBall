@@ -1,6 +1,5 @@
 package com.chrisni.screens;
 
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Sound;
@@ -14,8 +13,10 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.scenes.scene2d.*;
+import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.ObjectSet;
 import com.chrisni.actors.BallActor;
 import com.chrisni.actors.LaserActor;
 import com.chrisni.actors.LaserPool;
@@ -31,7 +32,8 @@ public class GameScreen implements Screen {
 		int num;
 		float actorX, actorY, time;
 		boolean started = false;
-		final float TIME_OPEN = 0.25f;
+		final float TIME_OPEN = 0.1f;
+		final float TIME_DISABLED = 0.4f;
 		final Sound sound = Gdx.audio.newSound(Gdx.files.internal("sound\\laser_sound.mp3"));
 
 		CannonActor(int num) {
@@ -43,10 +45,13 @@ public class GameScreen implements Screen {
 			setBounds(actorX, actorY, cannon_width, cannon_height);
 			addListener(new InputListener(){
 				public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-					((CannonActor)event.getTarget()).started = true;
-					((CannonActor)event.getTarget()).time = 0;
-					cannonTouched[((CannonActor)event.getTarget()).num] = true;
-					sound.play(1f);
+					if (((CannonActor) event.getTarget()).time >= TIME_OPEN + TIME_DISABLED ||
+							!((CannonActor) event.getTarget()).started ) {
+						((CannonActor) event.getTarget()).started = true;
+						((CannonActor) event.getTarget()).time = 0;
+						cannonTouched[((CannonActor) event.getTarget()).num] = true;
+						sound.play(1f);
+					}
 					return true;
 				}
 			});
@@ -54,7 +59,9 @@ public class GameScreen implements Screen {
 
 		@Override
 		public void draw(Batch batch, float alpha) {
-			if (started) {
+			if (time >= TIME_OPEN) {
+				batch.draw(cannon_exhausted, actorX, actorY, cannon_width, cannon_height);
+			} else if (time > 0) {
 				batch.draw(cannon_prepare, actorX, actorY, cannon_width, cannon_height);
 			} else {
 				batch.draw(cannon_stationary, actorX, actorY, cannon_width, cannon_height);
@@ -64,7 +71,7 @@ public class GameScreen implements Screen {
 		@Override
 		public void act(float delta) {
 			super.act(delta);
-			if (time >= TIME_OPEN) {
+			if (time >= TIME_OPEN + TIME_DISABLED) {
 				started = false;
 				time = 0;
 			} else if (started) {
@@ -79,18 +86,18 @@ public class GameScreen implements Screen {
 
 	public static TextureRegion cannon_stationary;
 	public static TextureRegion cannon_prepare;
+	public static TextureRegion cannon_exhausted;
 	public static float cannon_width;
 	public static float cannon_height;
 
 	private final static float Y_FRAC = 1 / 10f;
 	private final static float DT = 1 / 60f;
 	private final com.chrisni.actors.LaserPool[] LASERS = new com.chrisni.actors.LaserPool[NUM_CANNON];
-	private final Array<Body> deadLasers = new Array<Body>();
+	private final ObjectSet<Body> deadLasers = new ObjectSet<Body>();
 
 	private Stage stage;
 	private Batch batch;
 	private FitViewport viewp;
-	private com.chrisni.actors.LaserActor curr;
 	private boolean[] cannonTouched = new boolean[NUM_CANNON];
 	private final LaserBall game;
 
@@ -104,11 +111,14 @@ public class GameScreen implements Screen {
 	private final short BALL_MASK = 0x1 << 2;
 	private final short WALL_MASK = 0x1 << 3;
 
+	private Sound laserBallSound;
+
 	public static final float PIXELS_TO_METERS = 100f;
 
 
 	public GameScreen(final LaserBall game) {
 		this.game = game;
+		laserBallSound = Gdx.audio.newSound(Gdx.files.internal("sound\\collision_sound.mp3"));
 		score = new ScoreActor(game);
 		lasers = new Array<Body>(Body.class);
 		balls = new Array<Body>(Body.class);
@@ -118,6 +128,7 @@ public class GameScreen implements Screen {
 		stage.addActor(score);
 		cannon_stationary = new TextureRegion(new Texture("img/cannon/cannon_stationary.png"));
 		cannon_prepare = new TextureRegion(new Texture("img/cannon/cannon_prepare.png"));
+		cannon_exhausted = new TextureRegion(new Texture("img/cannon/cannon_exhausted.png"));
 		cannon_width = cannon_stationary.getRegionWidth() * WIDTH / (float) NUM_CANNON / cannon_stationary.getRegionWidth();
 		cannon_height = cannon_stationary.getRegionHeight() * HEIGHT * Y_FRAC / cannon_stationary.getRegionHeight();
 		for (int i = 0; i < NUM_CANNON; i++) {
@@ -130,11 +141,11 @@ public class GameScreen implements Screen {
 
 	@Override
 	public void render(float delta) {
-		Gdx.gl.glClearColor(255, 255, 255, 0);
+		Gdx.gl.glClearColor(0, 0, 0.2f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		for (int i = 0; i < NUM_CANNON; i++) {
 			if (cannonTouched[i]) {
-				curr = LASERS[i].obtain();
+				LaserActor curr = LASERS[i].obtain();
 				stage.addActor(curr);
 				laserInit(curr);
 				cannonTouched[i] = false;
@@ -144,28 +155,39 @@ public class GameScreen implements Screen {
 		stage.act(Gdx.graphics.getDeltaTime());
 
 		Iterator<Body> ballIterator = balls.iterator();
+
 		while(ballIterator.hasNext()) {
-			Body body = ballIterator.next();
+			final Body body = ballIterator.next();
 			if (body.getPosition().y <= (cannon_height - 10 )/ PIXELS_TO_METERS) {
+				ballIterator.remove();
 				ballActor = (BallActor) body.getUserData();
 				ballActor.remove();
-				ballIterator.remove();
 				world.destroyBody(body);
 			}
 		}
 		if (balls.size == 0) {
-			game.setScreen(new GameOverScreen(game, score.getScore()));
+			System.out.println("hi");
+			Gdx.app.postRunnable(new Runnable() {
+				@Override
+				public void run() {
+					game.setScreen(new GameOverScreen(game, score.getScore()));}
+			});
 			this.dispose();
 		}
 
 		Iterator<Body> laserIterator = deadLasers.iterator();
 		while (laserIterator.hasNext()) {
-			Body body = laserIterator.next();
-			curr = (LaserActor) body.getUserData();
-			curr.remove();
+			final Body body = laserIterator.next();
+			final LaserActor curr = (LaserActor) body.getUserData();
+			Gdx.app.postRunnable(new Runnable() {
+				@Override
+				public void run() {
+					curr.remove();
+					world.destroyBody(body);
+				}
+			});
 			LASERS[curr.getNum()].free(curr);
 			lasers.removeValue(body, false);
-			world.destroyBody(body);
 			laserIterator.remove();
 		}
 		stage.draw();
@@ -223,7 +245,12 @@ public class GameScreen implements Screen {
 		world.setContactListener(new ContactListener() {
 			@Override
 			public void beginContact(Contact contact) {
-
+				if ((contact.getFixtureA().getBody().getUserData() instanceof LaserActor &&
+						contact.getFixtureB().getBody().getUserData() instanceof BallActor) ||
+						(contact.getFixtureA().getBody().getUserData() instanceof BallActor &&
+								contact.getFixtureB().getBody().getUserData() instanceof LaserActor)) {
+					laserBallSound.play(1f);
+				}
 			}
 
 			@Override
@@ -246,7 +273,8 @@ public class GameScreen implements Screen {
 						if (score.getScore() % 10 == 0) Gdx.app.postRunnable(new Runnable() {
 							@Override
 							public void run() {
-								ballInit();							}
+								ballInit();
+							}
 						});
 					}
 				} else if (contact.getFixtureB().getBody().getUserData() instanceof LaserActor) {
@@ -257,7 +285,8 @@ public class GameScreen implements Screen {
 						if (score.getScore() % 10 == 0) Gdx.app.postRunnable(new Runnable() {
 							@Override
 							public void run() {
-								ballInit();							}
+								ballInit();
+							}
 						});
 					}
 				}
@@ -309,7 +338,6 @@ public class GameScreen implements Screen {
 	private void laserInit(LaserActor laser) {
 		BodyDef laserDef = new BodyDef();
 		laserDef.type = BodyDef.BodyType.DynamicBody;
-		laserDef.type = BodyDef.BodyType.DynamicBody;
 		laserDef.position.set((laser.getX() + laser.getWidth() / 2) / PIXELS_TO_METERS, (laser.getY() + laser.getHeight() / 2) / PIXELS_TO_METERS);
 		laserDef.linearVelocity.add(new Vector2(0, laser.getVel() / PIXELS_TO_METERS));
 		laserDef.gravityScale = 0;
@@ -321,7 +349,7 @@ public class GameScreen implements Screen {
 
 		FixtureDef laserFixtureDef = new FixtureDef();
 		laserFixtureDef.shape = laserShape;
-		laserFixtureDef.density = 5f;
+		laserFixtureDef.density = 10f;
 		laserFixtureDef.restitution = 0f;
 		laserFixtureDef.filter.categoryBits = LASER_MASK;
 		laserFixtureDef.filter.maskBits = BALL_MASK | WALL_MASK;
@@ -349,8 +377,8 @@ public class GameScreen implements Screen {
 
 		FixtureDef ballFixtureDef = new FixtureDef();
 		ballFixtureDef.shape = ballShape;
-		ballFixtureDef.density = 0.5f;
-		ballFixtureDef.restitution = 1f;
+		ballFixtureDef.density = 0.05f;
+		ballFixtureDef.restitution = 1.25f;
 		ballFixtureDef.filter.categoryBits = BALL_MASK;
 		ballFixtureDef.filter.maskBits = BALL_MASK | LASER_MASK | WALL_MASK;
 

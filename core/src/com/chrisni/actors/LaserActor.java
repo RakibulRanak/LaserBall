@@ -30,14 +30,14 @@ public class LaserActor extends Actor implements Pool.Poolable {
         this.id = id;
         this.setX(num * GameScreen.cannon_width + LASER_W);
         this.setY(LASER_H);
-        this.setWidth(laser.getRegionWidth());
-        this.setHeight(laser.getRegionHeight());
+        this.setWidth(laser.getRegionWidth() * SCALE_X);
+        this.setHeight(laser.getRegionHeight() * SCALE_Y);
     }
 
     @Override
     public void draw(Batch batch, float alpha) {
-        batch.draw(laser,this.getX(),this.getY(),this.getOriginX(),this.getOriginY(),this.getWidth() * SCALE_X,
-                this.getHeight() * SCALE_Y,this.getScaleX(), this.getScaleY(),this.getRotation());
+        batch.draw(laser,this.getX(),this.getY(),this.getOriginX(),this.getOriginY(),this.getWidth(),
+                this.getHeight(),this.getScaleX(), this.getScaleY(),this.getRotation());
     }
 
     @Override
