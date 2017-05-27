@@ -6,6 +6,16 @@ import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.chrisni.game.LaserBall;
 
 /**
@@ -15,7 +25,12 @@ public class GameOverScreen implements Screen {
 
     private final LaserBall game;
     private final int NUM_HIGHSCORES = 5;
+    private Preferences prefs = MainMenuScreen.prefs;
+    private Viewport viewp;
+    private SpriteBatch batch;
+    private Stage stage; //TODO: Dependency Injection
     private int score;
+    private Skin skin;
 
     static OrthographicCamera camera;
 
@@ -23,8 +38,40 @@ public class GameOverScreen implements Screen {
     public GameOverScreen(final LaserBall laserBall, int score) {
         this.game = laserBall;
         this.score = score;
-        camera = MainMenuScreen.camera;
+
+        this.skin = new Skin(Gdx.files.internal("skins/menu.json"));
+        viewp = new FitViewport(GameScreen.getWidth(), GameScreen.getHeight(), new OrthographicCamera());
+        batch = new SpriteBatch();
+        stage = new Stage(viewp, batch);
+
+        final TextButton playButton = new TextButton("Play Again", skin, "default");
+        playButton.setWidth(150f);
+        playButton.setHeight(64f);
+        playButton.setPosition(150, 100);
+        playButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        game.setScreen(new GameScreen(game));
+                        dispose();
+                    }});
+            }
+        });
+
+        Label titleLabel = new Label("You lost with a score of " + score + "!!!", skin, "title");
+        titleLabel.setPosition(40, 600);
+
+        Label highScoreLabel = new Label("High Scores", skin, "title");
+        highScoreLabel.setPosition(100, 500);
+
         setHighScores();
+
+        stage.addActor(playButton);
+        stage.addActor(titleLabel);
+        stage.addActor(highScoreLabel);
+        Gdx.input.setInputProcessor(stage);
     }
 
     @Override
@@ -37,24 +84,7 @@ public class GameOverScreen implements Screen {
         Gdx.gl.glClearColor(0, 0, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        camera.update();
-        game.batch.setProjectionMatrix(camera.combined);
-
-        game.batch.begin();
-        game.font.draw(game.batch, "You lost with a score of " + score + "!!!", 170, 400);
-        game.font.draw(game.batch, "High Scores", 170, 350);
-        game.font.draw(game.batch, "Tap anywhere to play again!", 170, 100);
-        displayHighScores();
-        game.batch.end();
-
-        if (Gdx.input.isTouched()) {
-            Gdx.app.postRunnable(new Runnable() {
-                @Override
-                public void run() {
-                    game.setScreen(new GameScreen(game));
-                    dispose();
-                }});
-        }
+        stage.draw();
     }
 
     @Override
@@ -79,11 +109,12 @@ public class GameOverScreen implements Screen {
 
     @Override
     public void dispose() {
-
+        batch.dispose();
+        stage.dispose();
+        skin.dispose();
     }
 
     private void setHighScores() {
-        Preferences prefs = MainMenuScreen.prefs;
         int[] scores = new int[NUM_HIGHSCORES + 1];
         for (int i = 0; i < NUM_HIGHSCORES; i++) {
             String key = "highscore" + i;
@@ -97,20 +128,14 @@ public class GameOverScreen implements Screen {
             if (curr >= 0) {
                 prefs.putInteger(key, curr);
             }
+            String currScore = (i + 1) + ". " + ((scores[i] >= 0) ? scores[i] : "--");
+            Label scoreLabel = new Label(currScore, skin, "title");
+            scoreLabel.setPosition(100, 450 - 50 * i);
+            stage.addActor(scoreLabel);
         }
         prefs.flush();
     }
 
-    private void displayHighScores() {
-        Preferences prefs = MainMenuScreen.prefs;
-        int[] scores = new int[NUM_HIGHSCORES + 1];
-        for (int i = 0; i < NUM_HIGHSCORES; i++) {
-            String key = "highscore" + i;
-            scores[i] = prefs.getInteger(key, -1);
-            String currScore = (i + 1) + ". " + ((scores[i] >= 0) ? scores[i] : "--");
-            game.font.draw(game.batch, currScore, 170, 325 - 25 * i);
-        }
-    }
 
     private void insertionSort(int[] arr) {
         for (int i = 1; i < arr.length; i++) {

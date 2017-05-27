@@ -8,12 +8,12 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.scenes.scene2d.*;
-import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.ObjectSet;
@@ -87,6 +87,7 @@ public class GameScreen implements Screen {
 	public static TextureRegion cannon_stationary;
 	public static TextureRegion cannon_prepare;
 	public static TextureRegion cannon_exhausted;
+	public static TextureAtlas cannonAtlas;
 	public static float cannon_width;
 	public static float cannon_height;
 
@@ -95,7 +96,7 @@ public class GameScreen implements Screen {
 	private final com.chrisni.actors.LaserPool[] LASERS = new com.chrisni.actors.LaserPool[NUM_CANNON];
 	private final ObjectSet<Body> deadLasers = new ObjectSet<Body>();
 
-	private Stage stage;
+	private Stage stage; //TODO: Dependency Injection
 	private Batch batch;
 	private FitViewport viewp;
 	private boolean[] cannonTouched = new boolean[NUM_CANNON];
@@ -126,9 +127,10 @@ public class GameScreen implements Screen {
 		batch = new SpriteBatch();
 		stage = new Stage(viewp, batch);
 		stage.addActor(score);
-		cannon_stationary = new TextureRegion(new Texture("img/cannon/cannon_stationary.png"));
-		cannon_prepare = new TextureRegion(new Texture("img/cannon/cannon_prepare.png"));
-		cannon_exhausted = new TextureRegion(new Texture("img/cannon/cannon_exhausted.png"));
+		cannonAtlas = new TextureAtlas(Gdx.files.internal("img/cannon_atlas/cannons.atlas"));
+		cannon_stationary = cannonAtlas.findRegion("cannon_stationary");
+		cannon_prepare = cannonAtlas.findRegion("cannon_prepare");
+		cannon_exhausted = cannonAtlas.findRegion("cannon_exhausted");
 		cannon_width = cannon_stationary.getRegionWidth() * WIDTH / (float) NUM_CANNON / cannon_stationary.getRegionWidth();
 		cannon_height = cannon_stationary.getRegionHeight() * HEIGHT * Y_FRAC / cannon_stationary.getRegionHeight();
 		for (int i = 0; i < NUM_CANNON; i++) {
@@ -157,7 +159,7 @@ public class GameScreen implements Screen {
 		Iterator<Body> ballIterator = balls.iterator();
 
 		while(ballIterator.hasNext()) {
-			final Body body = ballIterator.next();
+			Body body = ballIterator.next();
 			if (body.getPosition().y <= (cannon_height - 10 )/ PIXELS_TO_METERS) {
 				ballIterator.remove();
 				ballActor = (BallActor) body.getUserData();
@@ -166,26 +168,21 @@ public class GameScreen implements Screen {
 			}
 		}
 		if (balls.size == 0) {
-			System.out.println("hi");
 			Gdx.app.postRunnable(new Runnable() {
 				@Override
 				public void run() {
 					game.setScreen(new GameOverScreen(game, score.getScore()));}
 			});
 			this.dispose();
+			return;
 		}
 
 		Iterator<Body> laserIterator = deadLasers.iterator();
 		while (laserIterator.hasNext()) {
-			final Body body = laserIterator.next();
-			final LaserActor curr = (LaserActor) body.getUserData();
-			Gdx.app.postRunnable(new Runnable() {
-				@Override
-				public void run() {
-					curr.remove();
-					world.destroyBody(body);
-				}
-			});
+			Body body = laserIterator.next();
+			LaserActor curr = (LaserActor) body.getUserData();
+			world.destroyBody(body);
+			curr.remove();
 			LASERS[curr.getNum()].free(curr);
 			lasers.removeValue(body, false);
 			laserIterator.remove();
@@ -220,8 +217,15 @@ public class GameScreen implements Screen {
 
 	@Override
 	public void dispose () {
+		for (Actor actor : stage.getActors()) {
+			if (actor instanceof CannonActor) {
+				((CannonActor) actor).sound.dispose();
+			}
+		}
 		stage.dispose();
 		world.dispose();
+		laserBallSound.dispose();
+		cannonAtlas.dispose();
 	}
 
 	public static int getWidth() {
@@ -267,8 +271,7 @@ public class GameScreen implements Screen {
 			public void postSolve(Contact contact, ContactImpulse impulse) {
 				if (contact.getFixtureA().getBody().getUserData() instanceof LaserActor) {
 					deadLasers.add(contact.getFixtureA().getBody());
-					if (contact.getFixtureA().getBody().getUserData() instanceof BallActor
-							||contact.getFixtureB().getBody().getUserData() instanceof BallActor) {
+					if (contact.getFixtureB().getBody().getUserData() instanceof BallActor) {
 						score.increase();
 						if (score.getScore() % 10 == 0) Gdx.app.postRunnable(new Runnable() {
 							@Override
@@ -279,8 +282,7 @@ public class GameScreen implements Screen {
 					}
 				} else if (contact.getFixtureB().getBody().getUserData() instanceof LaserActor) {
 					deadLasers.add(contact.getFixtureB().getBody());
-					if (contact.getFixtureA().getBody().getUserData() instanceof BallActor
-							||contact.getFixtureB().getBody().getUserData() instanceof BallActor) {
+					if (contact.getFixtureA().getBody().getUserData() instanceof BallActor) {
 						score.increase();
 						if (score.getScore() % 10 == 0) Gdx.app.postRunnable(new Runnable() {
 							@Override
@@ -349,7 +351,7 @@ public class GameScreen implements Screen {
 
 		FixtureDef laserFixtureDef = new FixtureDef();
 		laserFixtureDef.shape = laserShape;
-		laserFixtureDef.density = 10f;
+		laserFixtureDef.density = 100f;
 		laserFixtureDef.restitution = 0f;
 		laserFixtureDef.filter.categoryBits = LASER_MASK;
 		laserFixtureDef.filter.maskBits = BALL_MASK | WALL_MASK;
@@ -367,7 +369,7 @@ public class GameScreen implements Screen {
 		BodyDef ballDef = new BodyDef();
 		ballDef.type = BodyDef.BodyType.DynamicBody;
 		ballDef.position.set((ballActor.getX() + ballActor.getWidth() / 2) / PIXELS_TO_METERS, (ballActor.getY() + ballActor.getHeight() / 2) / PIXELS_TO_METERS);
-		ballDef.linearVelocity.add(new Vector2(MathUtils.randomSign(), 0));
+		ballDef.linearVelocity.add(new Vector2(MathUtils.randomSign() * 2f, 0));
 		Body ball = world.createBody(ballDef);
 
 		ball.setUserData(ballActor);
@@ -377,8 +379,8 @@ public class GameScreen implements Screen {
 
 		FixtureDef ballFixtureDef = new FixtureDef();
 		ballFixtureDef.shape = ballShape;
-		ballFixtureDef.density = 0.05f;
-		ballFixtureDef.restitution = 1.25f;
+		ballFixtureDef.density = 0.01f;
+		ballFixtureDef.restitution = 1f;
 		ballFixtureDef.filter.categoryBits = BALL_MASK;
 		ballFixtureDef.filter.maskBits = BALL_MASK | LASER_MASK | WALL_MASK;
 

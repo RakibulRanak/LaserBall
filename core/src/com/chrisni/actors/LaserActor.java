@@ -16,7 +16,7 @@ import static com.badlogic.gdx.scenes.scene2d.actions.Actions.run;
  */
 public class LaserActor extends Actor implements Pool.Poolable {
 
-    private TextureRegion laser = new TextureRegion(new Texture("img/cannon/laser.png"));
+    private TextureRegion laser = GameScreen.cannonAtlas.findRegion("laser");
     private final float LASER_W = (58  * GameScreen.cannon_width / 64) / 2;
     private final float LASER_H = 110 * GameScreen.cannon_height / 128;
     private final float SCALE_X = GameScreen.cannon_width / GameScreen.cannon_stationary.getRegionWidth();
