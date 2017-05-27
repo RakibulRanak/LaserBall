@@ -60,6 +60,22 @@ public class GameOverScreen implements Screen {
             }
         });
 
+        final TextButton quitButton = new TextButton("Quit", skin, "default");
+        quitButton.setWidth(150f);
+        quitButton.setHeight(64f);
+        quitButton.setPosition(150, 100 - 74);
+        quitButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        dispose();
+                        Gdx.app.exit();
+                    }});
+            }
+        });
+
         Label titleLabel = new Label("You lost with a score of " + score + "!!!", skin, "title");
         titleLabel.setPosition(40, 600);
 
@@ -69,6 +85,7 @@ public class GameOverScreen implements Screen {
         setHighScores();
 
         stage.addActor(playButton);
+        stage.addActor(quitButton);
         stage.addActor(titleLabel);
         stage.addActor(highScoreLabel);
         Gdx.input.setInputProcessor(stage);

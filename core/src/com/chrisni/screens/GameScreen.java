@@ -96,7 +96,7 @@ public class GameScreen implements Screen {
 	private final com.chrisni.actors.LaserPool[] LASERS = new com.chrisni.actors.LaserPool[NUM_CANNON];
 	private final ObjectSet<Body> deadLasers = new ObjectSet<Body>();
 
-	private Stage stage; //TODO: Dependency Injection
+	private Stage stage; //TODO: Dependency Injection, get rid of static variables
 	private Batch batch;
 	private FitViewport viewp;
 	private boolean[] cannonTouched = new boolean[NUM_CANNON];

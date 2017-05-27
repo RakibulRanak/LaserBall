@@ -46,7 +46,7 @@ public class MainMenuScreen implements Screen {
         stage = new Stage(viewp, batch);
 
         final TextButton playButton = new TextButton("Play", skin, "default");
-        playButton.setWidth(128f);
+        playButton.setWidth(150f);
         playButton.setHeight(64f);
         playButton.setPosition((GameScreen.getWidth() - playButton.getWidth()) / 2, (GameScreen.getHeight() - playButton.getHeight()) / 2);
         playButton.addListener(new ClickListener() {
@@ -57,6 +57,22 @@ public class MainMenuScreen implements Screen {
                     public void run() {
                         game.setScreen(new GameScreen(game));
                         dispose();
+                    }});
+            }
+        });
+
+        final TextButton quitButton = new TextButton("Quit", skin, "default");
+        quitButton.setWidth(150f);
+        quitButton.setHeight(64f);
+        quitButton.setPosition((GameScreen.getWidth() - playButton.getWidth()) / 2, ((GameScreen.getHeight() - playButton.getHeight()) / 2) - 74);
+        quitButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        dispose();
+                        Gdx.app.exit();
                     }});
             }
         });
@@ -72,6 +88,7 @@ public class MainMenuScreen implements Screen {
         stage.addActor(title);
         stage.addActor(titleLabel);
         stage.addActor(playButton);
+        stage.addActor(quitButton);
         Gdx.input.setInputProcessor(stage);
     }
 
