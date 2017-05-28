@@ -17,5 +17,10 @@
 		title: {
 			font: sans
 		}
+	},
+	com.badlogic.gdx.scenes.scene2d.ui.ImageButton$ImageButtonStyle: {
+		theme: {
+			down: theme-down, up: theme-up, checked: theme-check
+		}
 	}
 }

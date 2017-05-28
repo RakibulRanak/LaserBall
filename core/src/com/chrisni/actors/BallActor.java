@@ -12,16 +12,13 @@ import com.chrisni.screens.GameScreen;
  */
 public class BallActor extends Actor {
 
-    private TextureRegion ball = new TextureRegion(new Texture("img/ball/normal_ball.png"));
+    private TextureRegion ball;
     private int id;
 
     public BallActor(int id) {
         super();
         this.id = id;
-        this.setWidth(ball.getRegionWidth());
-        this.setHeight(ball.getRegionHeight());
-        this.setX(ball.getRegionWidth() / 2 + MathUtils.random(GameScreen.getWidth() - ball.getRegionWidth()));
-        this.setY(GameScreen.getHeight() - ball.getRegionHeight() / 2);
+
     }
 
     @Override
@@ -41,6 +38,16 @@ public class BallActor extends Actor {
     @Override
     public int hashCode() {
         return id;
+    }
+
+    public void setFirstRegion(TextureRegion region) {
+        if (ball == null) {
+            this.ball = region;
+            this.setWidth(ball.getRegionWidth());
+            this.setHeight(ball.getRegionHeight());
+            this.setX(ball.getRegionWidth() / 2 + MathUtils.random(GameScreen.getWidth() - ball.getRegionWidth()));
+            this.setY(GameScreen.getHeight() - ball.getRegionHeight() / 2);
+        }
     }
 
 }

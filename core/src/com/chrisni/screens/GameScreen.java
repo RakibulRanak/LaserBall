@@ -1,21 +1,19 @@
 package com.chrisni.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.scenes.scene2d.*;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.ObjectSet;
 import com.chrisni.actors.BallActor;
 import com.chrisni.actors.LaserActor;
@@ -32,8 +30,8 @@ public class GameScreen implements Screen {
 		int num;
 		float actorX, actorY, time;
 		boolean started = false;
-		final float TIME_OPEN = 0.1f;
-		final float TIME_DISABLED = 0.4f;
+		final float TIME_OPEN = 0.2f;
+		final float TIME_DISABLED = 0.3f;
 		final Sound sound = Gdx.audio.newSound(Gdx.files.internal("sound\\laser_sound.mp3"));
 
 		CannonActor(int num) {
@@ -87,18 +85,17 @@ public class GameScreen implements Screen {
 	public static TextureRegion cannon_stationary;
 	public static TextureRegion cannon_prepare;
 	public static TextureRegion cannon_exhausted;
-	public static TextureAtlas cannonAtlas;
 	public static float cannon_width;
 	public static float cannon_height;
 
 	private final static float Y_FRAC = 1 / 10f;
 	private final static float DT = 1 / 60f;
 	private final com.chrisni.actors.LaserPool[] LASERS = new com.chrisni.actors.LaserPool[NUM_CANNON];
-	private final ObjectSet<Body> deadLasers = new ObjectSet<Body>();
+	private ObjectSet<Body> deadLasers = new ObjectSet<Body>();
 
-	private Stage stage; //TODO: Dependency Injection, get rid of static variables
-	private Batch batch;
-	private FitViewport viewp;
+	private Stage stage; //TODO: get rid of static variables
+	private Skin skin;
+	private Preferences prefs;
 	private boolean[] cannonTouched = new boolean[NUM_CANNON];
 	private final LaserBall game;
 
@@ -117,27 +114,29 @@ public class GameScreen implements Screen {
 	public static final float PIXELS_TO_METERS = 100f;
 
 
-	public GameScreen(final LaserBall game) {
+	public GameScreen(final LaserBall game, Stage stage, Skin skin, Preferences prefs) {
 		this.game = game;
 		laserBallSound = Gdx.audio.newSound(Gdx.files.internal("sound\\collision_sound.mp3"));
 		score = new ScoreActor(game);
 		lasers = new Array<Body>(Body.class);
 		balls = new Array<Body>(Body.class);
-		viewp = new FitViewport(WIDTH, HEIGHT, new OrthographicCamera());
-		batch = new SpriteBatch();
-		stage = new Stage(viewp, batch);
+		this.stage = stage;
+		this.skin = skin;
+		this.prefs = prefs;
+		if (skin.has("titleImg", TextureRegion.class)) {
+			Image titleImage = new Image(skin.getRegion("titleImg"));
+			stage.addActor(titleImage);
+		}
 		stage.addActor(score);
-		cannonAtlas = new TextureAtlas(Gdx.files.internal("img/cannon_atlas/cannons.atlas"));
-		cannon_stationary = cannonAtlas.findRegion("cannon_stationary");
-		cannon_prepare = cannonAtlas.findRegion("cannon_prepare");
-		cannon_exhausted = cannonAtlas.findRegion("cannon_exhausted");
+		cannon_stationary = skin.getRegion("cannon_stationary");
+		cannon_prepare = skin.getRegion("cannon_prepare");
+		cannon_exhausted = skin.getRegion("cannon_exhausted");
 		cannon_width = cannon_stationary.getRegionWidth() * WIDTH / (float) NUM_CANNON / cannon_stationary.getRegionWidth();
 		cannon_height = cannon_stationary.getRegionHeight() * HEIGHT * Y_FRAC / cannon_stationary.getRegionHeight();
 		for (int i = 0; i < NUM_CANNON; i++) {
 			stage.addActor(new CannonActor(i));
 			LASERS[i] = new LaserPool(i, NUM_CANNON);
 		}
-		Gdx.input.setInputProcessor(stage);
 		initPhysics();
 	}
 
@@ -148,8 +147,8 @@ public class GameScreen implements Screen {
 		for (int i = 0; i < NUM_CANNON; i++) {
 			if (cannonTouched[i]) {
 				LaserActor curr = LASERS[i].obtain();
-				stage.addActor(curr);
 				laserInit(curr);
+				stage.addActor(curr);
 				cannonTouched[i] = false;
 			}
 		}
@@ -168,10 +167,11 @@ public class GameScreen implements Screen {
 			}
 		}
 		if (balls.size == 0) {
+			stage.clear();
 			Gdx.app.postRunnable(new Runnable() {
 				@Override
 				public void run() {
-					game.setScreen(new GameOverScreen(game, score.getScore()));}
+					game.setScreen(new GameOverScreen(game, stage, skin, prefs, score.getScore()));}
 			});
 			this.dispose();
 			return;
@@ -217,15 +217,8 @@ public class GameScreen implements Screen {
 
 	@Override
 	public void dispose () {
-		for (Actor actor : stage.getActors()) {
-			if (actor instanceof CannonActor) {
-				((CannonActor) actor).sound.dispose();
-			}
-		}
-		stage.dispose();
 		world.dispose();
 		laserBallSound.dispose();
-		cannonAtlas.dispose();
 	}
 
 	public static int getWidth() {
@@ -239,6 +232,7 @@ public class GameScreen implements Screen {
 	private void initPhysics() {
 		world = new World(new Vector2(0, -1f), true);
 
+		ballInit();
 		ballInit();
 
 		wallInit(new BodyDef(), true, false);
@@ -338,6 +332,7 @@ public class GameScreen implements Screen {
 	}
 
 	private void laserInit(LaserActor laser) {
+		laser.setFirstRegion(skin.getRegion("laser"));
 		BodyDef laserDef = new BodyDef();
 		laserDef.type = BodyDef.BodyType.DynamicBody;
 		laserDef.position.set((laser.getX() + laser.getWidth() / 2) / PIXELS_TO_METERS, (laser.getY() + laser.getHeight() / 2) / PIXELS_TO_METERS);
@@ -363,8 +358,13 @@ public class GameScreen implements Screen {
 		lasers.add(laserBody);
 	}
 
+	private int count = 0;
+
 	private void ballInit() {
-		ballActor = new BallActor(score.getScore() % 10);
+//		ballActor = new BallActor(score.getScore() % 10);
+		ballActor = new BallActor(count);
+		ballActor.setFirstRegion(skin.getRegion("ball"));
+		count++;
 		stage.addActor(ballActor);
 		BodyDef ballDef = new BodyDef();
 		ballDef.type = BodyDef.BodyType.DynamicBody;

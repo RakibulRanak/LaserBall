@@ -16,7 +16,7 @@ import static com.badlogic.gdx.scenes.scene2d.actions.Actions.run;
  */
 public class LaserActor extends Actor implements Pool.Poolable {
 
-    private TextureRegion laser = GameScreen.cannonAtlas.findRegion("laser");
+    private TextureRegion laser;
     private final float LASER_W = (58  * GameScreen.cannon_width / 64) / 2;
     private final float LASER_H = 110 * GameScreen.cannon_height / 128;
     private final float SCALE_X = GameScreen.cannon_width / GameScreen.cannon_stationary.getRegionWidth();
@@ -30,8 +30,6 @@ public class LaserActor extends Actor implements Pool.Poolable {
         this.id = id;
         this.setX(num * GameScreen.cannon_width + LASER_W);
         this.setY(LASER_H);
-        this.setWidth(laser.getRegionWidth() * SCALE_X);
-        this.setHeight(laser.getRegionHeight() * SCALE_Y);
     }
 
     @Override
@@ -68,5 +66,13 @@ public class LaserActor extends Actor implements Pool.Poolable {
     @Override
     public int hashCode() {
         return id;
+    }
+
+    public void setFirstRegion(TextureRegion region) {
+        if (laser == null) {
+            laser = region;
+            this.setWidth(laser.getRegionWidth() * SCALE_X);
+            this.setHeight(laser.getRegionHeight() * SCALE_Y);
+        }
     }
 }

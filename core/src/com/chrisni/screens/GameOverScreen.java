@@ -25,24 +25,21 @@ public class GameOverScreen implements Screen {
 
     private final LaserBall game;
     private final int NUM_HIGHSCORES = 5;
-    private Preferences prefs = MainMenuScreen.prefs;
-    private Viewport viewp;
-    private SpriteBatch batch;
-    private Stage stage; //TODO: Dependency Injection
+    private Preferences prefs;
+    private Stage stage;
     private int score;
     private Skin skin;
 
     static OrthographicCamera camera;
 
 
-    public GameOverScreen(final LaserBall laserBall, int score) {
+    public GameOverScreen(final LaserBall laserBall, Stage mStage, Skin mSkin, Preferences mPrefs, int score) {
         this.game = laserBall;
         this.score = score;
 
-        this.skin = new Skin(Gdx.files.internal("skins/menu.json"));
-        viewp = new FitViewport(GameScreen.getWidth(), GameScreen.getHeight(), new OrthographicCamera());
-        batch = new SpriteBatch();
-        stage = new Stage(viewp, batch);
+        this.prefs = mPrefs;
+        this.skin = mSkin;
+        this.stage = mStage;
 
         final TextButton playButton = new TextButton("Play Again", skin, "default");
         playButton.setWidth(150f);
@@ -54,8 +51,8 @@ public class GameOverScreen implements Screen {
                 Gdx.app.postRunnable(new Runnable() {
                     @Override
                     public void run() {
-                        game.setScreen(new GameScreen(game));
-                        dispose();
+                        stage.clear();
+                        game.setScreen(new GameScreen(game, stage, skin, prefs));
                     }});
             }
         });
@@ -76,6 +73,22 @@ public class GameOverScreen implements Screen {
             }
         });
 
+        final TextButton optionButton = new TextButton("Options", skin, "default");
+        optionButton.setWidth(150f);
+        optionButton.setHeight(64f);
+        optionButton.setPosition(150 + 160, 100);
+        optionButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        stage.clear();
+                        game.setScreen(new OptionsScreen(game, stage, skin, prefs, GameOverScreen.this));
+                    }});
+            }
+        });
+
         Label titleLabel = new Label("You lost with a score of " + score + "!!!", skin, "title");
         titleLabel.setPosition(40, 600);
 
@@ -85,6 +98,7 @@ public class GameOverScreen implements Screen {
         setHighScores();
 
         stage.addActor(playButton);
+        stage.addActor(optionButton);
         stage.addActor(quitButton);
         stage.addActor(titleLabel);
         stage.addActor(highScoreLabel);
@@ -126,7 +140,6 @@ public class GameOverScreen implements Screen {
 
     @Override
     public void dispose() {
-        batch.dispose();
         stage.dispose();
         skin.dispose();
     }

@@ -6,12 +6,13 @@ import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.scenes.scene2d.Group;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
@@ -28,23 +29,15 @@ import com.chrisni.game.LaserBall;
 public class MainMenuScreen implements Screen {
 
     private final LaserBall game;
-    private Skin skin;
-    private SpriteBatch batch;
-    private Viewport viewp;
+    private Skin skin; //TODO: Use VerticalGroup
     private Stage stage;
+    private Preferences prefs;
 
-    public static Preferences prefs;
-
-    public MainMenuScreen(final LaserBall laserBall) {
+    public MainMenuScreen(final LaserBall laserBall, Stage mStage, Skin mSkin, Preferences mPrefs) {
         this.game = laserBall;
-        this.prefs = Gdx.app.getPreferences("LaserBall");
-        game.font = new BitmapFont(Gdx.files.internal("skins/menu_font.fnt"));
-
-        this.skin = new Skin(Gdx.files.internal("skins/menu.json"));
-        viewp = new FitViewport(GameScreen.getWidth(), GameScreen.getHeight(), new OrthographicCamera());
-        batch = new SpriteBatch();
-        stage = new Stage(viewp, batch);
-
+        this.stage = mStage;
+        this.skin = mSkin;
+        this.prefs = mPrefs;
         final TextButton playButton = new TextButton("Play", skin, "default");
         playButton.setWidth(150f);
         playButton.setHeight(64f);
@@ -55,7 +48,25 @@ public class MainMenuScreen implements Screen {
                 Gdx.app.postRunnable(new Runnable() {
                     @Override
                     public void run() {
-                        game.setScreen(new GameScreen(game));
+                        stage.clear();
+                        game.setScreen(new GameScreen(game, stage, skin, prefs));
+                        dispose();
+                    }});
+            }
+        });
+
+        final TextButton optionButton = new TextButton("Options", skin, "default");
+        optionButton.setWidth(150f);
+        optionButton.setHeight(64f);
+        optionButton.setPosition((GameScreen.getWidth() - playButton.getWidth()) / 2, ((GameScreen.getHeight() - playButton.getHeight()) / 2) - 74);
+        optionButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        stage.clear();
+                        game.setScreen(new OptionsScreen(game, stage, skin, prefs, MainMenuScreen.this));
                         dispose();
                     }});
             }
@@ -64,7 +75,7 @@ public class MainMenuScreen implements Screen {
         final TextButton quitButton = new TextButton("Quit", skin, "default");
         quitButton.setWidth(150f);
         quitButton.setHeight(64f);
-        quitButton.setPosition((GameScreen.getWidth() - playButton.getWidth()) / 2, ((GameScreen.getHeight() - playButton.getHeight()) / 2) - 74);
+        quitButton.setPosition((GameScreen.getWidth() - playButton.getWidth()) / 2, ((GameScreen.getHeight() - playButton.getHeight()) / 2) - 74 * 2);
         quitButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -88,7 +99,16 @@ public class MainMenuScreen implements Screen {
         stage.addActor(title);
         stage.addActor(titleLabel);
         stage.addActor(playButton);
+        stage.addActor(optionButton);
         stage.addActor(quitButton);
+    }
+
+    public MainMenuScreen(final LaserBall laserBall) {
+        this(laserBall, new Stage(new FitViewport(GameScreen.getWidth(), GameScreen.getHeight(), new OrthographicCamera())),
+                new Skin(Gdx.files.internal("skins/menu.json")), Gdx.app.getPreferences("LaserBall"));
+        game.font = new BitmapFont(Gdx.files.internal("skins/menu_font.fnt"));
+        skin.addRegions(new TextureAtlas(Gdx.files.internal("img/cannon_atlas/cannons.atlas")));
+        skin.add("ball", new TextureRegion(new Texture("img/ball/normal_ball.png")));
         Gdx.input.setInputProcessor(stage);
     }
 
@@ -101,7 +121,6 @@ public class MainMenuScreen implements Screen {
     public void render(float delta) {
         Gdx.gl.glClearColor(0, 0, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
         stage.draw();
 
     }
@@ -128,7 +147,6 @@ public class MainMenuScreen implements Screen {
 
     @Override
     public void dispose() {
-        stage.dispose();
-        skin.dispose();
+
     }
 }

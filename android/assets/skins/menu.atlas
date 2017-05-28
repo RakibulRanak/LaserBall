@@ -1,6 +1,6 @@
 
 menu.png
-size: 256,256
+size: 256,1024
 format: RGBA8888
 filter: Nearest,Nearest
 repeat: none
@@ -13,7 +13,7 @@ box-down
   index: -1
 box-up
   rotate: false
-  xy: 132, 132
+  xy: 148, 906
   size: 32, 16
   orig: 32, 16
   offset: 0, 0
@@ -23,5 +23,26 @@ label
   xy: 2, 20
   size: 128, 128
   orig: 128, 128
+  offset: 0, 0
+  index: -1
+theme-check
+  rotate: false
+  xy: 2, 666
+  size: 144, 256
+  orig: 144, 256
+  offset: 0, 0
+  index: -1
+theme-down
+  rotate: false
+  xy: 2, 408
+  size: 144, 256
+  orig: 144, 256
+  offset: 0, 0
+  index: -1
+theme-up
+  rotate: false
+  xy: 2, 150
+  size: 144, 256
+  orig: 144, 256
   offset: 0, 0
   index: -1
