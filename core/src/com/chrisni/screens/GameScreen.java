@@ -48,7 +48,7 @@ public class GameScreen implements Screen {
 						((CannonActor) event.getTarget()).started = true;
 						((CannonActor) event.getTarget()).time = 0;
 						cannonTouched[((CannonActor) event.getTarget()).num] = true;
-						sound.play(1f);
+						sound.play(volume);
 					}
 					return true;
 				}
@@ -105,6 +105,7 @@ public class GameScreen implements Screen {
 	private ScoreActor score;
 	private BallActor ballActor;
 	private float accumulator;
+	private float volume;
 	private final short LASER_MASK = 0x1;
 	private final short BALL_MASK = 0x1 << 2;
 	private final short WALL_MASK = 0x1 << 3;
@@ -116,6 +117,7 @@ public class GameScreen implements Screen {
 
 	public GameScreen(final LaserBall game, Stage stage, Skin skin, Preferences prefs) {
 		this.game = game;
+		this.volume = prefs.getFloat("volume");
 		laserBallSound = Gdx.audio.newSound(Gdx.files.internal("sound\\collision_sound.mp3"));
 		score = new ScoreActor(game);
 		lasers = new Array<Body>(Body.class);
@@ -123,7 +125,7 @@ public class GameScreen implements Screen {
 		this.stage = stage;
 		this.skin = skin;
 		this.prefs = prefs;
-		if (skin.has("titleImg", TextureRegion.class)) {
+		if (prefs.getBoolean("themed", false)) {
 			Image titleImage = new Image(skin.getRegion("titleImg"));
 			stage.addActor(titleImage);
 		}
@@ -235,7 +237,7 @@ public class GameScreen implements Screen {
 		world = new World(new Vector2(0, -1f), true);
 
 		ballInit();
-		ballInit();
+//		ballInit();
 
 		wallInit(new BodyDef(), true, false);
 		wallInit(new BodyDef(), false, true);
@@ -249,7 +251,7 @@ public class GameScreen implements Screen {
 						contact.getFixtureB().getBody().getUserData() instanceof BallActor) ||
 						(contact.getFixtureA().getBody().getUserData() instanceof BallActor &&
 								contact.getFixtureB().getBody().getUserData() instanceof LaserActor)) {
-					laserBallSound.play(1f);
+					laserBallSound.play(volume);
 				}
 			}
 

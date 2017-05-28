@@ -7,12 +7,13 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.*;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Align;
 import com.chrisni.game.LaserBall;
 
 import java.lang.reflect.Constructor;
@@ -66,24 +67,54 @@ public class OptionsScreen implements Screen {
 
         final ImageButton themeButton = new ImageButton(skin, "theme");
         themeButton.setPosition(150, 200);
-        themeButton.setChecked(skin.has("titleImg", TextureRegion.class));
+        themeButton.setChecked(prefs.getBoolean("themed", false));
         themeButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 if(themeButton.isChecked()) {
                     skin.addRegions(new TextureAtlas(Gdx.files.internal("img/cannon_atlas/chloe_cannon.atlas")));
                     skin.add("ball", new TextureRegion(new Texture("img/ball/kelsey_ball.png")));
-                    skin.add("titleImg", new TextureRegion(new Texture("img/chloe_cannon/ann_bg.png")));
+                    prefs.putBoolean("themed", true);
                 } else {
                     skin.addRegions(new TextureAtlas(Gdx.files.internal("img/cannon_atlas/cannons.atlas")));
                     skin.add("ball", new TextureRegion(new Texture("img/ball/normal_ball.png")));
-                    skin.remove("titleImg", TextureRegion.class);
+                    prefs.putBoolean("themed", false);
                 }
+                prefs.flush();
             }
         });
 
+        final Slider volume = new Slider(0, 1, 1 / 1000f, false, skin, "volume");
+        volume.setWidth(150);
+        volume.setPosition(150, 500);
+        volume.setValue(prefs.getFloat("volume", 1f));
+
+        final Label volumeLabel = new Label(String.format("Vol: %2.1f", volume.getValue() * 100), skin, "title");
+        volumeLabel.setPosition(volume.getX(), volume.getY() + 10);
+
+        volume.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                prefs.putFloat("volume", volume.getValue());
+                prefs.flush();
+                volumeLabel.setText(String.format("Vol: %2.1f", volume.getValue() * 100));
+            }
+        });
+
+        Image title = new Image(skin.getAtlas().findRegion("label"));
+        title.setWidth(170);
+        title.setHeight(170);
+        title.setPosition(150, 600);
+
+        Label titleLabel = new Label("options", skin, "title");
+        titleLabel.setPosition(title.getX() + title.getWidth() / 2, title.getY() + title.getHeight() / 2, Align.center);
+
         stage.addActor(backButton);
         stage.addActor(themeButton);
+        stage.addActor(title);
+        stage.addActor(titleLabel);
+        stage.addActor(volume);
+        stage.addActor(volumeLabel);
     }
 
     @Override

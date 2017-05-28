@@ -1,48 +1,62 @@
 
 menu.png
-size: 256,1024
+size: 512,512
 format: RGBA8888
 filter: Nearest,Nearest
 repeat: none
 box-down
   rotate: false
-  xy: 2, 2
+  xy: 440, 400
   size: 32, 16
   orig: 32, 16
   offset: 0, 0
   index: -1
 box-up
   rotate: false
-  xy: 148, 906
+  xy: 132, 142
   size: 32, 16
   orig: 32, 16
   offset: 0, 0
   index: -1
 label
   rotate: false
-  xy: 2, 20
+  xy: 2, 30
   size: 128, 128
   orig: 128, 128
   offset: 0, 0
   index: -1
 theme-check
   rotate: false
-  xy: 2, 666
+  xy: 294, 160
   size: 144, 256
   orig: 144, 256
   offset: 0, 0
   index: -1
 theme-down
   rotate: false
-  xy: 2, 408
+  xy: 148, 160
   size: 144, 256
   orig: 144, 256
   offset: 0, 0
   index: -1
 theme-up
   rotate: false
-  xy: 2, 150
+  xy: 2, 160
   size: 144, 256
   orig: 144, 256
+  offset: 0, 0
+  index: -1
+volume-background
+  rotate: false
+  xy: 2, 20
+  size: 128, 8
+  orig: 128, 8
+  offset: 0, 0
+  index: -1
+volume-knob
+  rotate: false
+  xy: 2, 2
+  size: 4, 16
+  orig: 4, 16
   offset: 0, 0
   index: -1

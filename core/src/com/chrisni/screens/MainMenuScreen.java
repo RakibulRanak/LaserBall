@@ -8,7 +8,6 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -20,7 +19,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.Viewport;
 import com.chrisni.game.LaserBall;
 
 /**
@@ -106,9 +104,14 @@ public class MainMenuScreen implements Screen {
     public MainMenuScreen(final LaserBall laserBall) {
         this(laserBall, new Stage(new FitViewport(GameScreen.getWidth(), GameScreen.getHeight(), new OrthographicCamera())),
                 new Skin(Gdx.files.internal("skins/menu.json")), Gdx.app.getPreferences("LaserBall"));
-        game.font = new BitmapFont(Gdx.files.internal("skins/menu_font.fnt"));
-        skin.addRegions(new TextureAtlas(Gdx.files.internal("img/cannon_atlas/cannons.atlas")));
-        skin.add("ball", new TextureRegion(new Texture("img/ball/normal_ball.png")));
+        if (!prefs.getBoolean("themed", false)) {
+            skin.addRegions(new TextureAtlas(Gdx.files.internal("img/cannon_atlas/cannons.atlas")));
+            skin.add("ball", new TextureRegion(new Texture("img/ball/normal_ball.png")));
+        } else {
+            skin.addRegions(new TextureAtlas(Gdx.files.internal("img/cannon_atlas/chloe_cannon.atlas")));
+            skin.add("ball", new TextureRegion(new Texture("img/ball/kelsey_ball.png")));
+        }
+        skin.add("titleImg", new TextureRegion(new Texture("img/chloe_cannon/ann_bg.png")));
         Gdx.input.setInputProcessor(stage);
     }
 

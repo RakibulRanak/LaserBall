@@ -22,5 +22,10 @@
 		theme: {
 			down: theme-down, up: theme-up, checked: theme-check
 		}
+	},
+	com.badlogic.gdx.scenes.scene2d.ui.Slider$SliderStyle: {
+		volume: {
+			background: volume-background, knob: volume-knob
+		}
 	}
 }

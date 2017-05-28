@@ -6,16 +6,14 @@ import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.Viewport;
+import com.badlogic.gdx.utils.Align;
 import com.chrisni.game.LaserBall;
 
 /**
@@ -90,20 +88,29 @@ public class GameOverScreen implements Screen {
             }
         });
 
-        Label titleLabel = new Label("You lost with a score of " + score + "!!!", skin, "title");
-        titleLabel.setPosition(40, 600);
+        Label loseLabel = new Label("You lost with a score of " + score + "!!!", skin, "title");
+        loseLabel.setPosition(40, 550);
 
         Label highScoreLabel = new Label("High Scores", skin, "title");
         highScoreLabel.setPosition(100, 500);
 
         setHighScores();
 
+        Image title = new Image(skin.getAtlas().findRegion("label"));
+        title.setWidth(170);
+        title.setHeight(170);
+        title.setPosition(150, 600);
+
+        Label titleLabel = new Label("defeat", skin, "title");
+        titleLabel.setPosition(title.getX() + title.getWidth() / 2, title.getY() + title.getHeight() / 2, Align.center);
+
         stage.addActor(playButton);
         stage.addActor(optionButton);
         stage.addActor(quitButton);
-        stage.addActor(titleLabel);
+        stage.addActor(loseLabel);
         stage.addActor(highScoreLabel);
-        Gdx.input.setInputProcessor(stage);
+        stage.addActor(title);
+        stage.addActor(titleLabel);
     }
 
     @Override
