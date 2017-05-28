@@ -33,13 +33,14 @@ public class GameOverScreen implements Screen {
     static OrthographicCamera camera;
 
 
-    public GameOverScreen(final LaserBall laserBall, Stage mStage, Skin mSkin, Preferences mPrefs, int score) {
+    public GameOverScreen(final LaserBall laserBall, Stage mStage, Skin mSkin, Preferences mPrefs) {
         this.game = laserBall;
-        this.score = score;
 
         this.prefs = mPrefs;
         this.skin = mSkin;
         this.stage = mStage;
+
+        this.score = prefs.getInteger("gameScore");
 
         final TextButton playButton = new TextButton("Play Again", skin, "default");
         playButton.setWidth(150f);

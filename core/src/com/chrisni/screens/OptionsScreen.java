@@ -44,31 +44,29 @@ public class OptionsScreen implements Screen {
                 Gdx.app.postRunnable(new Runnable() {
                     @Override
                     public void run() {
-//                        try {
-//                            Class<?> c = Class.forName(back.getClass().getName());
-//                            Constructor<?> cons = c.getConstructor(LaserBall.class, Stage.class, Skin.class, Preferences.class);
-//                            Object backScreen = cons.newInstance(game, stage, skin, prefs);
+                        try {
+                            Class<?> c = Class.forName(back.getClass().getName());
+                            Constructor<?> cons = c.getConstructor(LaserBall.class, Stage.class, Skin.class, Preferences.class);
                             stage.clear();
-//                            game.setScreen((Screen) backScreen);
-                            System.out.println(back.getClass().getName());
-                            game.setScreen(new MainMenuScreen(game, stage, skin, prefs));
-//                        } catch (ClassNotFoundException e) {
-//                            throw new IllegalArgumentException("No such class: " + back.getClass().getName());
-//                        } catch (NoSuchMethodException e) {
-//                            throw new IllegalArgumentException("No constructor of type : LaserBall, Stage, Skin, Preferences for " + back.getClass().getName());
-//                        } catch (IllegalAccessException e) {
-//                            e.printStackTrace();
-//                        } catch (InstantiationException e) {
-//                            e.printStackTrace();
-//                        } catch (InvocationTargetException e) {
-//                            e.printStackTrace();
-//                        }
+                            game.setScreen((Screen) cons.newInstance(game, stage, skin, prefs));
+                        } catch (ClassNotFoundException e) {
+                            throw new IllegalArgumentException("No such class: " + back.getClass().getName());
+                        } catch (NoSuchMethodException e) {
+                            throw new IllegalArgumentException("No constructor of type : LaserBall, Stage, Skin, Preferences for " + back.getClass().getName());
+                        } catch (IllegalAccessException e) {
+                            e.printStackTrace();
+                        } catch (InstantiationException e) {
+                            e.printStackTrace();
+                        } catch (InvocationTargetException e) {
+                            e.printStackTrace();
+                        }
                     }});
             }
         });
 
         final ImageButton themeButton = new ImageButton(skin, "theme");
         themeButton.setPosition(150, 200);
+        themeButton.setChecked(skin.has("titleImg", TextureRegion.class));
         themeButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {

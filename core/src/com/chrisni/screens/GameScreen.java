@@ -171,7 +171,9 @@ public class GameScreen implements Screen {
 			Gdx.app.postRunnable(new Runnable() {
 				@Override
 				public void run() {
-					game.setScreen(new GameOverScreen(game, stage, skin, prefs, score.getScore()));}
+					prefs.putInteger("gameScore", score.getScore());
+					prefs.flush();
+					game.setScreen(new GameOverScreen(game, stage, skin, prefs));}
 			});
 			this.dispose();
 			return;
