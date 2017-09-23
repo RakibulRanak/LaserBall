@@ -90,6 +90,7 @@ public class GameScreen implements Screen {
 
 	private final static float Y_FRAC = 1 / 10f;
 	private final static float DT = 1 / 60f;
+	private final static float V_LIM_FACTOR = 1.5f;
 	private final com.chrisni.actors.LaserPool[] LASERS = new com.chrisni.actors.LaserPool[NUM_CANNON];
 	private ObjectSet<Body> deadLasers = new ObjectSet<Body>();
 
@@ -263,10 +264,11 @@ public class GameScreen implements Screen {
 			@Override
 			public void preSolve(Contact contact, Manifold oldManifold) {
 				if (balls.contains(contact.getFixtureA().getBody(), true)) {
-					contact.getFixtureA().getBody().getLinearVelocity().limit(2 * HEIGHT / PIXELS_TO_METERS);
+					contact.getFixtureA().getBody().getLinearVelocity().limit(V_LIM_FACTOR * HEIGHT / PIXELS_TO_METERS);
 				} else if (balls.contains(contact.getFixtureB().getBody(), true)) {
-					contact.getFixtureB().getBody().getLinearVelocity().limit(2 * HEIGHT / PIXELS_TO_METERS);
+					contact.getFixtureB().getBody().getLinearVelocity().limit(V_LIM_FACTOR * HEIGHT / PIXELS_TO_METERS);
 				}
+
 			}
 
 			@Override
@@ -281,6 +283,11 @@ public class GameScreen implements Screen {
 								ballInit();
 							}
 						});
+						Body curr = contact.getFixtureB().getBody();
+//						Log.i("angle", Double.toString(limitRange(curr.getLinearVelocity().angle())));
+						if (limitRange(curr.getLinearVelocity().angle()) > Math.PI) {
+							curr.setLinearVelocity(curr.getLinearVelocity().x, -curr.getLinearVelocity().y / 2.0f);
+						}
 					}
 				} else if (contact.getFixtureB().getBody().getUserData() instanceof LaserActor) {
 					deadLasers.add(contact.getFixtureB().getBody());
@@ -292,7 +299,20 @@ public class GameScreen implements Screen {
 								ballInit();
 							}
 						});
+						Body curr = contact.getFixtureA().getBody();
+//						Log.i("angle", Double.toString(limitRange(curr.getLinearVelocity().angle())));
+						if (limitRange(curr.getLinearVelocity().angle()) % (2 * Math.PI) > Math.PI) {
+							curr.setLinearVelocity(curr.getLinearVelocity().x, -curr.getLinearVelocity().y / 2.0f);
+						}
 					}
+				}
+			}
+
+			private double limitRange(double angle) {
+				if (angle < 0) {
+					return limitRange(angle + 2 * Math.PI);
+				} else {
+					return angle % (2 * Math.PI);
 				}
 			}
 		});
@@ -323,7 +343,7 @@ public class GameScreen implements Screen {
 		while (accumulator >= DT) {
 			world.step(DT, 6, 2);
 			for (Body body : balls) {
-				body.setLinearVelocity(body.getLinearVelocity().limit(2 * HEIGHT / PIXELS_TO_METERS));
+				body.setLinearVelocity(body.getLinearVelocity().limit(V_LIM_FACTOR * HEIGHT / PIXELS_TO_METERS));
 			}
 			accumulator -= DT;
 		}
