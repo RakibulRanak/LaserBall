@@ -109,12 +109,16 @@ public class OptionsScreen implements Screen {
         Label titleLabel = new Label("options", skin, "title");
         titleLabel.setPosition(title.getX() + title.getWidth() / 2, title.getY() + title.getHeight() / 2, Align.center);
 
+        Label coinLabel = new Label("coins: " + prefs.getInteger("coins", 0), skin, "title");
+        coinLabel.setPosition(150, 400);
+
         stage.addActor(backButton);
-        stage.addActor(themeButton);
+//        stage.addActor(themeButton);
         stage.addActor(title);
         stage.addActor(titleLabel);
         stage.addActor(volume);
         stage.addActor(volumeLabel);
+        stage.addActor(coinLabel);
     }
 
     @Override

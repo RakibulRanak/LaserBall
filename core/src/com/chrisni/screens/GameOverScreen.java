@@ -39,11 +39,12 @@ public class GameOverScreen implements Screen {
         this.stage = mStage;
 
         this.score = prefs.getInteger("gameScore");
+        prefs.putInteger("coins", prefs.getInteger("coins", 0) + this.score);
 
         final TextButton playButton = new TextButton("Play Again", skin, "default");
         playButton.setWidth(150f);
         playButton.setHeight(64f);
-        playButton.setPosition(150, 100);
+        playButton.setPosition(0, 100);
         playButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -59,7 +60,7 @@ public class GameOverScreen implements Screen {
         final TextButton quitButton = new TextButton("Quit", skin, "default");
         quitButton.setWidth(150f);
         quitButton.setHeight(64f);
-        quitButton.setPosition(150, 100 - 74);
+        quitButton.setPosition(320, 100);
         quitButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -75,7 +76,7 @@ public class GameOverScreen implements Screen {
         final TextButton optionButton = new TextButton("Options", skin, "default");
         optionButton.setWidth(150f);
         optionButton.setHeight(64f);
-        optionButton.setPosition(150 + 160, 100);
+        optionButton.setPosition(160, 100);
         optionButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {

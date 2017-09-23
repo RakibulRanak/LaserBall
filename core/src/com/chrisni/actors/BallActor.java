@@ -45,7 +45,7 @@ public class BallActor extends Actor {
             this.ball = region;
             this.setWidth(ball.getRegionWidth());
             this.setHeight(ball.getRegionHeight());
-            this.setX(ball.getRegionWidth() / 2 + MathUtils.random(GameScreen.getWidth() - ball.getRegionWidth()));
+            this.setX(ball.getRegionWidth() + MathUtils.random((float) GameScreen.getWidth() - 2 * ball.getRegionWidth()));
             this.setY(GameScreen.getHeight() - ball.getRegionHeight() / 2);
         }
     }

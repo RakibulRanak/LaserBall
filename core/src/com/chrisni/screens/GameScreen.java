@@ -262,7 +262,11 @@ public class GameScreen implements Screen {
 
 			@Override
 			public void preSolve(Contact contact, Manifold oldManifold) {
-
+				if (balls.contains(contact.getFixtureA().getBody(), true)) {
+					contact.getFixtureA().getBody().getLinearVelocity().limit(2 * HEIGHT / PIXELS_TO_METERS);
+				} else if (balls.contains(contact.getFixtureB().getBody(), true)) {
+					contact.getFixtureB().getBody().getLinearVelocity().limit(2 * HEIGHT / PIXELS_TO_METERS);
+				}
 			}
 
 			@Override
@@ -318,6 +322,9 @@ public class GameScreen implements Screen {
 		accumulator += delta;
 		while (accumulator >= DT) {
 			world.step(DT, 6, 2);
+			for (Body body : balls) {
+				body.setLinearVelocity(body.getLinearVelocity().limit(2 * HEIGHT / PIXELS_TO_METERS));
+			}
 			accumulator -= DT;
 		}
 
@@ -325,9 +332,6 @@ public class GameScreen implements Screen {
 			BallActor ballActor = (BallActor) body.getUserData();
 			ballActor.setPosition(body.getPosition().x * PIXELS_TO_METERS - ballActor.getWidth() / 2, body.getPosition().y * PIXELS_TO_METERS - ballActor.getHeight() / 2);
 			ballActor.setRotation((float)Math.toDegrees(body.getAngle()));
-			if (body.getLinearVelocity().len() >= 2 * HEIGHT / PIXELS_TO_METERS) {
-				body.setLinearVelocity(body.getLinearVelocity().limit(2 * HEIGHT / PIXELS_TO_METERS));
-			}
 		}
 		for (Body body : lasers) {
 			LaserActor laserActor = (LaserActor) body.getUserData();
